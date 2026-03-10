@@ -1,457 +1,551 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desert Raiders Market Tracker</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Storage — Steam Price Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #020408;
+      --panel: #050d14;
+      --border: #0ff3;
+      --neon-cyan: #00f5ff;
+      --neon-pink: #ff2d78;
+      --neon-green: #39ff14;
+      --neon-yellow: #ffea00;
+      --text: #c8e6f0;
+      --dim: #4a7a8a;
+      --glow-cyan: 0 0 8px #00f5ff88, 0 0 20px #00f5ff44;
+      --glow-pink: 0 0 8px #ff2d7888, 0 0 20px #ff2d7844;
+      --glow-green: 0 0 8px #39ff1488, 0 0 20px #39ff1444;
+    }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            color: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-        }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
 
-        header {
-            text-align: center;
-            margin-bottom: 60px;
-            animation: fadeInDown 0.8s ease-out;
-        }
+    /* Scanline effect */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,245,255,0.015) 2px,
+        rgba(0,245,255,0.015) 4px
+      );
+      pointer-events: none;
+      z-index: 1000;
+    }
 
-        h1 {
-            font-size: 3.5em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #ffffff 0%, #888888 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            letter-spacing: -2px;
-        }
+    /* Grid background */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,245,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,245,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        .subtitle {
-            color: #666;
-            font-size: 1em;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            font-weight: 300;
-        }
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 48px 20px 32px;
+      border-bottom: 1px solid var(--border);
+    }
 
-        .refresh-button {
-            margin: 20px auto;
-            display: block;
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
-            color: #fff;
-            border: 1px solid #333;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-        }
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.6rem, 5vw, 3rem);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-cyan), 0 0 40px #00f5ff66;
+      animation: flicker 6s infinite;
+    }
 
-        .refresh-button:hover {
-            background: linear-gradient(135deg, #333, #2a2a2a);
-            border-color: #444;
-            transform: translateY(-2px);
-        }
+    .logo span {
+      color: var(--neon-pink);
+      text-shadow: var(--glow-pink);
+    }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-            gap: 25px;
-            animation: fadeIn 1s ease-out;
-        }
+    .subtitle {
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: var(--dim);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
 
-        .card {
-            background: linear-gradient(145deg, #111111, #1a1a1a);
-            border-radius: 16px;
-            padding: 0;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.6),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            border: 1px solid #222;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.8s ease-out backwards;
-            overflow: hidden;
-            position: relative;
-        }
+    .controls {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border);
+    }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #ffffff, #666666);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
+    .status-bar {
+      font-size: 0.72rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
 
-        .card:hover::before {
-            opacity: 1;
-        }
+    .status-bar .alive { color: var(--neon-green); text-shadow: var(--glow-green); }
+    .status-bar .err  { color: var(--neon-pink);  text-shadow: var(--glow-pink);  }
 
-        .card:nth-child(1) { animation-delay: 0.05s; }
-        .card:nth-child(2) { animation-delay: 0.1s; }
-        .card:nth-child(3) { animation-delay: 0.15s; }
-        .card:nth-child(4) { animation-delay: 0.2s; }
-        .card:nth-child(5) { animation-delay: 0.25s; }
-        .card:nth-child(6) { animation-delay: 0.3s; }
-        .card:nth-child(7) { animation-delay: 0.35s; }
-        .card:nth-child(8) { animation-delay: 0.4s; }
-        .card:nth-child(9) { animation-delay: 0.45s; }
+    .btn-refresh {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--neon-cyan);
+      background: transparent;
+      border: 1px solid var(--neon-cyan);
+      padding: 8px 20px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: var(--glow-cyan), inset 0 0 12px #00f5ff11;
+      transition: all 0.2s;
+    }
+    .btn-refresh:hover {
+      background: #00f5ff18;
+      box-shadow: 0 0 16px #00f5ffaa, inset 0 0 20px #00f5ff22;
+    }
+    .btn-refresh:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
 
-        .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 
-                0 20px 60px rgba(255, 255, 255, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border-color: #333;
-        }
+    main {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      padding: 28px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-        .card-header {
-            padding: 25px 25px 20px 25px;
-            border-bottom: 1px solid #222;
-        }
+    .card {
+      background: var(--panel);
+      border: 1px solid #0ff2;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.2s;
+      animation: cardIn 0.4s ease both;
+    }
 
-        .card-title {
-            font-size: 1.4em;
-            margin-bottom: 8px;
-            color: #ffffff;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
 
-        .card-subtitle {
-            color: #666;
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+    .card:hover {
+      border-color: #00f5ff66;
+      transform: translateY(-2px);
+    }
+    .card:hover::before { opacity: 1; }
 
-        .card-body {
-            padding: 25px;
-        }
+    .card-tag {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
 
-        .price-container {
-            margin-bottom: 20px;
-        }
+    .card-name {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--neon-cyan);
+      text-shadow: var(--glow-cyan);
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
 
-        .price-label {
-            font-size: 0.75em;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-        }
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, var(--neon-cyan), transparent);
+      margin-bottom: 16px;
+      opacity: 0.3;
+    }
 
-        .price {
-            font-size: 2.2em;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: -1px;
-        }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
 
-        .loading {
-            color: #666;
-            font-size: 0.9em;
-            animation: pulse 2s ease-in-out infinite;
-        }
+    .price-label {
+      font-size: 0.65rem;
+      color: var(--dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
 
-        .view-button {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
-            color: #fff;
-            text-decoration: none;
-            text-align: center;
-            border-radius: 8px;
-            font-weight: 500;
-            border: 1px solid #333;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            font-size: 0.85em;
-            letter-spacing: 1px;
-        }
+    .price-value {
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
 
-        .view-button:hover {
-            background: linear-gradient(135deg, #333, #2a2a2a);
-            border-color: #444;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(255, 255, 255, 0.05);
-        }
+    .price-value.lowest  { color: var(--neon-green); text-shadow: var(--glow-green); }
+    .price-value.median  { color: var(--neon-yellow); text-shadow: 0 0 8px #ffea0088; }
+    .price-value.volume  { color: var(--text); font-size: 0.85rem; }
 
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
+    .price-value.loading {
+      color: var(--dim);
+      animation: blink 1s infinite;
+    }
+    .price-value.error { color: var(--neon-pink); font-size: 0.8rem; }
 
-        .stat {
-            background: #0a0a0a;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #1a1a1a;
-        }
+    .card-link {
+      display: block;
+      margin-top: 14px;
+      font-size: 0.62rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: color 0.2s;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .card-link:hover { color: var(--neon-cyan); }
 
-        .stat-label {
-            font-size: 0.7em;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
-        }
+    /* Corner accent */
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 18px; height: 18px;
+      border-bottom: 1px solid var(--neon-pink);
+      border-right: 1px solid var(--neon-pink);
+      opacity: 0.4;
+    }
 
-        .stat-value {
-            font-size: 1em;
-            font-weight: 600;
-            color: #fff;
-        }
+    /* Sort bar */
+    .sort-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sort-btn {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+      background: transparent;
+      border: 1px solid #0ff2;
+      padding: 4px 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+    .sort-btn:hover, .sort-btn.active {
+      color: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      box-shadow: var(--glow-cyan);
+    }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+    footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 0.62rem;
+      color: var(--dim);
+      letter-spacing: 0.15em;
+    }
 
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    footer a { color: #0ff8; text-decoration: none; }
+    footer a:hover { color: var(--neon-cyan); }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+    @keyframes flicker {
+      0%,19%,21%,23%,25%,54%,56%,100% { opacity: 1; }
+      20%,22%,24%,55% { opacity: 0.6; }
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
+    .timestamp {
+      font-size: 0.65rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
 
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2.5em;
-            }
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 80px;
-            padding: 30px;
-            color: #444;
-            font-size: 0.85em;
-            border-top: 1px solid #1a1a1a;
-        }
-
-        .error {
-            color: #888;
-            font-size: 0.85em;
-        }
-
-        .notice {
-            text-align: center;
-            margin: 30px auto;
-            padding: 20px;
-            background: #1a1a1a;
-            border: 1px solid #222;
-            border-radius: 12px;
-            max-width: 800px;
-            color: #888;
-            font-size: 0.9em;
-            line-height: 1.6;
-        }
-
-        .notice strong {
-            color: #fff;
-        }
-    </style>
+    /* CORS note */
+    .cors-note {
+      position: relative;
+      z-index: 10;
+      margin: 16px 28px 0;
+      padding: 12px 16px;
+      border: 1px solid #ff2d7844;
+      background: #ff2d780a;
+      font-size: 0.68rem;
+      color: #ff8aaa;
+      letter-spacing: 0.08em;
+      line-height: 1.6;
+    }
+    .cors-note strong { color: var(--neon-pink); }
+    .cors-note a { color: var(--neon-cyan); }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Desert Raiders Collection</h1>
-            <p class="subtitle">Steam Market Tracker</p>
-        </header>
 
-        <div class="notice">
-            <strong>価格情報について:</strong><br>
-            Steam Community MarketはCORS制限により、直接価格を取得できません。<br>
-            各アイテムの「View on Steam Market」ボタンをクリックして最新価格をご確認ください。
-        </div>
+<header>
+  <div class="logo">NEON <span>STORAGE</span> TRACKER</div>
+  <div class="subtitle">Rust — Steam Market · JPY Price Monitor</div>
+</header>
 
-        <button class="refresh-button" onclick="loadAllPrices()">価格を更新</button>
-
-        <div class="grid" id="itemsGrid"></div>
-
-        <footer>
-            <p>Steam Community Market Data © Valve Corporation</p>
-        </footer>
+<div class="controls">
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <div class="sort-bar">
+      <button class="sort-btn active" data-sort="default">Default</button>
+      <button class="sort-btn" data-sort="price-asc">Price ↑</button>
+      <button class="sort-btn" data-sort="price-desc">Price ↓</button>
+      <button class="sort-btn" data-sort="name">Name</button>
     </div>
+    <div class="timestamp" id="timestamp">--</div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <div class="status-bar" id="status">● READY</div>
+    <button class="btn-refresh" id="refreshBtn" onclick="fetchAll()">↻ Refresh</button>
+  </div>
+</div>
 
-    <script>
-        const items = [
-            { name: 'Roadsign Vest', url: 'Desert%20Raiders%20Roadsign%20Vest' },
-            { name: 'Helmet', url: 'Desert%20Raiders%20Helmet' },
-            { name: 'Roadsign Pants', url: 'Desert%20Raiders%20Roadsign%20Pants' },
-            { name: 'Gloves', url: 'Desert%20Raiders%20Gloves' },
-            { name: 'Boots', url: 'Desert%20Raiders%20Boots' },
-            { name: 'Pants', url: 'Desert%20Raiders%20Pants' },
-            { name: 'Hoodie', url: 'Desert%20Raiders%20Hoodie' },
-            { name: 'Chest Plate', url: 'Desert%20Raiders%20Chest%20Plate' },
-            { name: 'Facemask', url: 'Desert%20Raiders%20Facemask' }
-        ];
+<div class="cors-note" id="corsNote" style="display:none;">
+  ⚠ <strong>CORS制限のお知らせ：</strong>
+  ブラウザのセキュリティポリシーにより Steam API への直接アクセスがブロックされています。
+  <strong>価格リンクをクリックして</strong>Steam マーケットで直接確認してください。
+  または <a href="https://store.steampowered.com/login/" target="_blank">Steam にログイン</a>した状態で閲覧すると改善される場合があります。
+</div>
 
-        const grid = document.getElementById('itemsGrid');
+<main id="grid"></main>
 
-        function createCard(item) {
-            const marketUrl = `https://steamcommunity.com/market/listings/252490/${item.url}`;
-            
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="card-header">
-                    <h2 class="card-title">${item.name}</h2>
-                    <p class="card-subtitle">Desert Raiders</p>
-                </div>
-                <div class="card-body">
-                    <div class="price-container">
-                        <div class="price-label">現在価格</div>
-                        <div class="price loading" data-item="${item.url}">読み込み中...</div>
-                    </div>
-                    <div class="stats">
-                        <div class="stat">
-                            <div class="stat-label">最安値</div>
-                            <div class="stat-value lowest-price" data-item="${item.url}">-</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">出品数</div>
-                            <div class="stat-value volume" data-item="${item.url}">-</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Status</div>
-                            <div class="stat-value">Available</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Game</div>
-                            <div class="stat-value">Rust</div>
-                        </div>
-                    </div>
-                    <a href="${marketUrl}" target="_blank" class="view-button">
-                        View on Steam Market
-                    </a>
-                </div>
-            `;
-            
-            return card;
-        }
+<footer>
+  DATA SOURCE: <a href="https://steamcommunity.com/market/" target="_blank">STEAM COMMUNITY MARKET</a>
+  &nbsp;·&nbsp; APP ID: 252490 (RUST)
+  &nbsp;·&nbsp; PRICES IN JPY ¥
+</footer>
 
-        function initializeCards() {
-            grid.innerHTML = '';
-            items.forEach(item => {
-                const card = createCard(item);
-                grid.appendChild(card);
-            });
-        }
+<script>
+  const ITEMS = [
+    { name: 'Scrap',     key: 'Neon%20Scrap%20Storage'     },
+    { name: 'Stone',     key: 'Neon%20Stone%20Storage'     },
+    { name: 'Sulfur',    key: 'Neon%20Sulfur%20Storage'    },
+    { name: 'Frags',     key: 'Neon%20Frags%20Storage'     },
+    { name: 'Ore',       key: 'Neon%20Ore%20Storage'       },
+    { name: 'Clothes',   key: 'Neon%20Clothes%20Storage'   },
+    { name: 'Tools',     key: 'Neon%20Tools%20Storage'     },
+    { name: 'Gun',       key: 'Neon%20Gun%20Storage'       },
+    { name: 'Elec',      key: 'Neon%20Elec%20Storage'      },
+    { name: 'Wood',      key: 'Neon%20Wood%20Storage'      },
+    { name: 'Boom',      key: 'Neon%20Boom%20Storage'      },
+    { name: 'Meds',      key: 'Neon%20Meds%20Storage'      },
+    { name: 'Ammo',      key: 'Neon%20Ammo%20Storage'      },
+    { name: 'Charcoal',  key: 'Neon%20Charcoal%20Storage'  },
+    { name: 'Food',      key: 'Neon%20Food%20Storage'      },
+    { name: 'Armor',     key: 'Neon%20Armor%20Storage'     },
+    { name: 'Comps',     key: 'Neon%20Comps%20Storage'     },
+    { name: 'Drop',      key: 'Neon%20Drop%20Box%20Storage'},
+  ];
 
-        async function fetchPrice(itemUrl) {
-            try {
-                // 複数のプロキシを試行
-                const proxies = [
-                    `https://api.allorigins.win/raw?url=`,
-                    `https://corsproxy.io/?`,
-                    `https://api.codetabs.com/v1/proxy?quest=`
-                ];
-                
-                const steamUrl = `https://steamcommunity.com/market/priceoverview/?appid=252490&currency=1&market_hash_name=${itemUrl}`;
-                
-                for (const proxy of proxies) {
-                    try {
-                        const response = await fetch(proxy + encodeURIComponent(steamUrl));
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.success && data.lowest_price) {
-                                return data;
-                            }
-                        }
-                    } catch (e) {
-                        continue;
-                    }
-                }
-                
-                return null;
-            } catch (error) {
-                console.error('Price fetch error:', error);
-                return null;
-            }
-        }
+  const APP_ID = 252490;
+  const CURRENCY = 9; // JPY
 
-        async function updatePrice(itemUrl) {
-            const priceElement = document.querySelector(`.price[data-item="${itemUrl}"]`);
-            const lowestPriceElement = document.querySelector(`.lowest-price[data-item="${itemUrl}"]`);
-            const volumeElement = document.querySelector(`.volume[data-item="${itemUrl}"]`);
-            
-            const data = await fetchPrice(itemUrl);
-            
-            if (data && data.success) {
-                priceElement.innerHTML = data.lowest_price || data.median_price || '価格未取得';
-                priceElement.classList.remove('loading');
-                
-                if (lowestPriceElement) {
-                    lowestPriceElement.textContent = data.lowest_price || '-';
-                }
-                if (volumeElement && data.volume) {
-                    volumeElement.textContent = data.volume;
-                }
-            } else {
-                priceElement.innerHTML = '<span class="error">Steamで確認</span>';
-                priceElement.classList.remove('loading');
-            }
-        }
+  // Store fetched data
+  let priceData = {};
+  let currentSort = 'default';
 
-        async function loadAllPrices() {
-            for (const item of items) {
-                await updatePrice(item.url);
-                // レート制限を避けるため少し待機
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
+  function marketUrl(item) {
+    return `https://steamcommunity.com/market/listings/${APP_ID}/${item.key}`;
+  }
 
-        // 初期化
-        initializeCards();
-        loadAllPrices();
-    </script>
+  function apiUrl(item) {
+    return `https://steamcommunity.com/market/priceoverview/?appid=${APP_ID}&currency=${CURRENCY}&market_hash_name=${item.key}`;
+  }
+
+  function fmt(val) {
+    if (val == null) return '---';
+    // Steam returns strings like "￥ 1,234" — clean and return
+    return val.replace(/\s/g, '');
+  }
+
+  function renderCards(items) {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    items.forEach((item, i) => {
+      const d = priceData[item.key] || {};
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.animationDelay = (i * 40) + 'ms';
+
+      let lowestHtml, medianHtml, volHtml;
+
+      if (d.status === 'loading') {
+        lowestHtml = `<span class="price-value loading">FETCHING...</span>`;
+        medianHtml = `<span class="price-value loading">FETCHING...</span>`;
+        volHtml    = `<span class="price-value loading">...</span>`;
+      } else if (d.status === 'error') {
+        lowestHtml = `<span class="price-value error">CORSブロック</span>`;
+        medianHtml = `<span class="price-value error">—</span>`;
+        volHtml    = `<span class="price-value error">—</span>`;
+      } else if (d.status === 'ok') {
+        lowestHtml = `<span class="price-value lowest">${fmt(d.lowest_price)}</span>`;
+        medianHtml = `<span class="price-value median">${fmt(d.median_price)}</span>`;
+        volHtml    = `<span class="price-value volume">${d.volume || '---'} 件</span>`;
+      } else {
+        lowestHtml = `<span class="price-value loading">WAITING...</span>`;
+        medianHtml = `<span class="price-value loading">WAITING...</span>`;
+        volHtml    = `<span class="price-value loading">...</span>`;
+      }
+
+      card.innerHTML = `
+        <div class="card-tag">RUST · SKIN</div>
+        <div class="card-name">${item.name} STORAGE</div>
+        <div class="divider"></div>
+        <div class="price-row">
+          <span class="price-label">最安値</span>
+          ${lowestHtml}
+        </div>
+        <div class="price-row">
+          <span class="price-label">中央値</span>
+          ${medianHtml}
+        </div>
+        <div class="price-row">
+          <span class="price-label">出品数</span>
+          ${volHtml}
+        </div>
+        <a class="card-link" href="${marketUrl(item)}" target="_blank">
+          → Steam Market で見る ↗
+        </a>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function getSortedItems() {
+    const items = [...ITEMS];
+    if (currentSort === 'name') {
+      return items.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    if (currentSort === 'price-asc' || currentSort === 'price-desc') {
+      return items.sort((a, b) => {
+        const pa = parsePriceNum(priceData[a.key]?.lowest_price);
+        const pb = parsePriceNum(priceData[b.key]?.lowest_price);
+        return currentSort === 'price-asc' ? pa - pb : pb - pa;
+      });
+    }
+    return items;
+  }
+
+  function parsePriceNum(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/[^0-9.]/g, '')) || 0;
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById('status');
+    el.className = 'status-bar ' + (type || '');
+    el.textContent = msg;
+  }
+
+  async function fetchItem(item) {
+    priceData[item.key] = { status: 'loading' };
+    renderCards(getSortedItems());
+
+    try {
+      const res = await fetch(apiUrl(item), { mode: 'cors' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!data.success) throw new Error('API returned success=false');
+      priceData[item.key] = { status: 'ok', ...data };
+    } catch (e) {
+      priceData[item.key] = { status: 'error', err: e.message };
+      document.getElementById('corsNote').style.display = 'block';
+    }
+    renderCards(getSortedItems());
+  }
+
+  async function fetchAll() {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    setStatus('● FETCHING...', 'alive');
+    document.getElementById('timestamp').textContent = '';
+
+    // Reset all to loading
+    ITEMS.forEach(item => { priceData[item.key] = { status: 'loading' }; });
+    renderCards(getSortedItems());
+
+    // Fetch all concurrently
+    await Promise.all(ITEMS.map(item => fetchItem(item)));
+
+    const now = new Date();
+    const ts = now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    document.getElementById('timestamp').textContent = `更新: ${ts}`;
+
+    const errors = ITEMS.filter(i => priceData[i.key]?.status === 'error').length;
+    if (errors === ITEMS.length) {
+      setStatus('● CORS ERROR', 'err');
+    } else if (errors > 0) {
+      setStatus(`● PARTIAL (${errors} err)`, 'err');
+    } else {
+      setStatus('● LIVE', 'alive');
+    }
+
+    btn.disabled = false;
+  }
+
+  // Sort buttons
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSort = btn.dataset.sort;
+      renderCards(getSortedItems());
+    });
+  });
+
+  // Initial render + fetch
+  renderCards(ITEMS);
+  fetchAll();
+</script>
 </body>
 </html>
